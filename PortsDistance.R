@@ -1,15 +1,14 @@
 library(rgdal)
 library(raster)
 library(gdistance)
-library(foreach)
-library(doParallel)
+library(readr)
 
 #Creat an empty raster
 new = raster(ncol=360*3, nrow= 180*3)
 projection(new) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 #Import Shapefile
-map <- readOGR(dsn = "/Users/j22700126/Desktop/Project Seminar/Distance Calculator/ne_50m_admin_0_countries/" , layer = "ne_50m_admin_0_countries")
+map <- readOGR(dsn = "~/ne_50m_admin_0_countries/" , layer = "ne_50m_admin_0_countries")
 plot(map)
 #rasterize the map to raster map
 r <- rasterize(map, new)
@@ -18,7 +17,6 @@ r <- rasterize(map, new)
 #Replace value with 1, 99999 to the point where ship can go and cannot
 values(r)[is.na(values(r))] <- 1
 values(r)[values(r)>1] <- 99999
-writeRaster(r, "/Users/j22700126/Desktop/map", format = "GTiff")
 plot(r)
 points(port$longitude, port$latitude, col = "red", cex = 0.01)
 
@@ -27,6 +25,8 @@ p <- transition(r, function(x){1/mean(x)}, 8)
 p <- geoCorrection(p)
 
 #Imort and transform port data to dataframe object
+port <- read_csv("~/port.csv")
+View(port)
 ports <- data.frame(port)
 
 #Self defined distance calculator, iput two pairs of longitude and latitude to get the shortest distance
@@ -41,7 +41,7 @@ DistanceCalculator <- function(port1, port2){
 ptm = proc.time()
 DistanceCalculator(cbind(ports[2206,2],ports[2206,3]),cbind(ports[3505,2],ports[3505,3]))
 proc.time() - ptm
-#Loop 
+#Loop to precalculate the distance and store it in the DB
 x = data.frame(port1=character(), port2=character(), distance=numeric(), stringsAsFactors = FALSE)
 for(i in 1:10){
   for(j in 1:i){
